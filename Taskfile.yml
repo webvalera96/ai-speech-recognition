@@ -1,0 +1,54 @@
+version: "3"
+
+# Loads variables from .env in the project root when the file exists (for `task run`, etc.).
+dotenv: [".env"]
+
+vars:
+  # Output binary path (adds .exe on Windows).
+  BINARY: bin/bot{{if eq OS "windows"}}.exe{{end}}
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Compile the Telegram bot into bin/ 
+    cmds:
+      - go build -o {{.BINARY}} ./cmd/bot
+    generates:
+      - "{{.BINARY}}"
+    sources:
+      - ./cmd/bot/**/*.go
+      - ./internal/**/*.go
+      - go.mod
+      - go.sum
+
+  run:
+    desc: Run the bot with go run (uses .env)
+    cmds:
+      - go run ./cmd/bot
+
+  vet:
+    desc: Run go vet 
+    cmds:
+      - go vet ./...
+
+  docker:up:
+    desc: Start PostgreSQL 
+    dir: docker
+    cmds:
+      - docker compose up -d
+
+  docker:down:
+    desc: Stop PostgreSQL 
+    dir: docker
+    cmds:
+      - docker compose down
+
+  docker:logs:
+    desc: Follow PostgreSQL logs
+    dir: docker
+    cmds:
+      - docker compose logs -f postgres
