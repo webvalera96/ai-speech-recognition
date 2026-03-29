@@ -45,7 +45,7 @@ var (
 
 // SummarizeMeeting implements services.Summarizer.
 func (c *Client) SummarizeMeeting(ctx context.Context, transcript string) (string, error) {
-	system := "Ты помощник для конспектов встреч. Дай краткую выжимку на русском: ключевые темы, решения, action items. Не превышай 2000 символов."
+	system := "Ты помощник для распознавания аудио встреч. Дай краткую выжимку на русском: ключевые темы, решения, action items. Не превышай 2000 символов."
 	user := "Транскрипт встречи:\n\n" + transcript
 	return c.chat(ctx, system, user)
 }
@@ -66,7 +66,7 @@ func (c *Client) chat(ctx context.Context, system, user string) (string, error) 
 			{"role": "system", "content": system},
 			{"role": "user", "content": user},
 		},
-		"temperature": 0.7,
+		"temperature": 0.9,
 		"max_tokens":  2000,
 	}
 	raw, err := json.Marshal(body)

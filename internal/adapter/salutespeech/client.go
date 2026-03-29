@@ -144,17 +144,15 @@ func (c *Client) upload(ctx context.Context, audio []byte) (string, error) {
 }
 
 func (c *Client) createRecognizeTask(ctx context.Context, requestFileID, filename string) (string, error) {
-	u := strings.TrimSuffix(c.cfg.SaluteSpeechRESTURL, "/") + "/speech:asyncRecognize"
+	u := strings.TrimSuffix(c.cfg.SaluteSpeechRESTURL, "/") + "/speech:async_recognize"
 	enc, rate := guessEncoding(filename)
 	payload := map[string]any{
-		"requestFileId": requestFileID,
+		"request_file_id": requestFileID,
 		"options": map[string]any{
-			"audioEncoding":  enc,
-			"sampleRate":     rate,
+			"audio_encoding": enc,
+			"sample_rate":    rate,
 			"language":       "ru-RU",
 			"model":          "general",
-			"channelsCount":  1,
-			"hypothesesCount": 1,
 		},
 	}
 	raw, err := json.Marshal(payload)
@@ -207,8 +205,8 @@ func (c *Client) waitTask(ctx context.Context, taskID string) (string, error) {
 		case <-deadline:
 			return "", fmt.Errorf("task timeout")
 		case <-ticker.C:
-			payload, _ := json.Marshal(map[string]string{"taskId": taskID})
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(payload))
+			// payload, _ := json.Marshal(map[string]string{"taskId": taskID})
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, u+"?id="+taskID, nil)
 			if err != nil {
 				return "", err
 			}
@@ -224,26 +222,16 @@ func (c *Client) waitTask(ctx context.Context, taskID string) (string, error) {
 			if resp.StatusCode != http.StatusOK {
 				return "", fmt.Errorf("task get status %d: %s", resp.StatusCode, truncate(body, 400))
 			}
-			var wrap struct {
-				Result taskPayload `json:"result"`
-				taskPayload
-			}
-			_ = json.Unmarshal(body, &wrap)
-			tp := wrap.Result
-			if tp.ID == "" {
-				tp = wrap.taskPayload
-			}
-			switch strings.ToUpper(tp.Status) {
+			var tp taskPayload
+			_ = json.Unmarshal(body, &tp)
+			switch strings.ToUpper(tp.Result.Status) {
 			case "DONE", "STATUS_DONE":
-				if tp.ResponseFileID != "" {
-					return tp.ResponseFileID, nil
-				}
 				if tp.Result.ResponseFileID != "" {
 					return tp.Result.ResponseFileID, nil
 				}
 				return "", fmt.Errorf("done but no response_file_id")
 			case "ERROR", "STATUS_ERROR":
-				return "", fmt.Errorf("task error: %s", tp.Error)
+				return "", fmt.Errorf("task error: %s", tp.Result.Error)
 			case "CANCELED", "STATUS_CANCELED":
 				return "", fmt.Errorf("task canceled")
 			}
@@ -252,20 +240,18 @@ func (c *Client) waitTask(ctx context.Context, taskID string) (string, error) {
 }
 
 type taskPayload struct {
-	ID               string `json:"id"`
-	Status           string `json:"status"`
-	Error            string `json:"error"`
-	ResponseFileID   string `json:"responseFileId"`
-	Result           struct {
-		Error            string `json:"error"`
-		ResponseFileID   string `json:"responseFileId"`
+	Status string `json:"status"`
+	Result struct {
+		Status         string `json:"status"`
+		ID             string `json:"id"`
+		Error          string `json:"error"`
+		ResponseFileID string `json:"response_file_id"`
 	} `json:"result"`
 }
 
 func (c *Client) download(ctx context.Context, responseFileID string) ([]byte, error) {
 	u := strings.TrimSuffix(c.cfg.SaluteSpeechRESTURL, "/") + "/data:download"
-	payload, _ := json.Marshal(map[string]string{"responseFileId": responseFileID})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u+"?response_file_id="+responseFileID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -317,8 +303,8 @@ func parseTranscriptJSON(raw []byte) (string, error) {
 		}
 		if v, ok := root["hypotheses"]; ok {
 			var hyps []struct {
-				Text            string `json:"text"`
-				NormalizedText  string `json:"normalizedText"`
+				Text           string `json:"text"`
+				NormalizedText string `json:"normalizedText"`
 			}
 			if json.Unmarshal(v, &hyps) == nil && len(hyps) > 0 {
 				t := hyps[0].NormalizedText
