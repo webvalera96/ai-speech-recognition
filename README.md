@@ -1,97 +1,88 @@
-# Meeting assistant (Telegram)
+# Помощник для конспектирования встреч (Telegram)
 
-Telegram bot that transcribes meeting audio with **SaluteSpeech**, summarizes text with **GigaChat**, stores transcripts in **PostgreSQL**, and supports keyword search and ad-hoc questions via `/chat`.
+Telegram-бот: транскрибация аудио встреч через **SaluteSpeech**, краткие выжимки текста через **GigaChat**, хранение в **PostgreSQL**, поиск по ключевым словам и вопросы к модели командой `/chat`.
 
-## Architecture
+## Архитектура
 
-- **Handlers** (`internal/handlers`) — thin Telegram and HTTP entrypoints.
-- **Services** (`internal/services`) — business logic and port interfaces.
-- **Repository** (`internal/repository/postgres`) — SQL via `pgx`.
-- **Adapters** (`internal/adapter`) — SaluteSpeech, GigaChat, telebot, chi HTTP, in-process job queue.
-- **Composition** — [Uber Fx](https://uber-go.github.io/fx/) (`internal/app`).
+- **Handlers** (`internal/handlers`) — тонкие точки входа: Telegram и HTTP.
+- **Services** (`internal/services`) — бизнес-логика и интерфейсы-порты.
+- **Repository** (`internal/repository/postgres`) — SQL через `pgx`.
+- **Adapters** (`internal/adapter`) — SaluteSpeech, GigaChat, telebot, chi HTTP, очередь задач в памяти.
 
-On startup the binary runs **embedded SQL migrations** (`internal/migrate/migrations`) against `DATABASE_URL` before opening the connection pool.
+При старте бинарник применяет **встроенные SQL-миграции** (`internal/migrate/migrations`) к базе из `DATABASE_URL`
 
-## Requirements
+## Технологический стек
 
 - Go **1.24+**
-- PostgreSQL 14+ (or compatible)
-- Telegram bot token ([BotFather](https://core.telegram.org/bots/tutorial))
-- SaluteSpeech and GigaChat API credentials from [Sber developer portal](https://developers.sber.ru/)
+- PostgreSQL 14+ (или совместимая СУБД)
+- Токен Telegram-бота ([BotFather](https://core.telegram.org/bots/tutorial))
+- Учётные данные API SaluteSpeech и GigaChat в [портале разработчика Сбера](https://developers.sber.ru/)
 
-## Environment variables
+## Переменные окружения (конфигурация)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | yes | Telegram bot token |
-| `DATABASE_URL` | yes | PostgreSQL URL (e.g. `postgres://user:pass@localhost:5432/meetings?sslmode=disable`) |
-| `HTTP_ADDR` | no | HTTP listen address (default `:8080`) |
-| `WORKER_POOL` | no | Concurrent job workers (default `3`) |
-| `GIGACHAT_CLIENT_ID` | yes | GigaChat OAuth client id |
-| `GIGACHAT_CLIENT_SECRET` | yes | GigaChat OAuth client secret |
-| `GIGACHAT_AUTH_URL` | no | Token endpoint (default Sber `.../api/v2/oauth`) |
-| `GIGACHAT_API_URL` | no | Chat completions URL |
-| `GIGACHAT_SCOPE` | no | OAuth scope (default `GIGACHAT_API_PERS`) |
-| `SALUTESPEECH_CLIENT_ID` | yes | SaluteSpeech OAuth client id |
-| `SALUTESPEECH_CLIENT_SECRET` | yes | SaluteSpeech OAuth client secret |
-| `SALUTESPEECH_REST_URL` | no | SmartSpeech REST base (default `https://smartspeech.sber.ru/rest/v1`) |
-| `SALUTESPEECH_AUTH_URL` | no | OAuth token URL |
-| `SALUTESPEECH_SCOPE` | no | OAuth scope (default `SALUTE_SPEECH_PERS`) |
+| Переменная | Обязательно | Описание |
+|------------|-------------|----------|
+| `TELEGRAM_BOT_TOKEN` | да | Токен Telegram-бота |
+| `DATABASE_URL` | да | Строка подключения PostgreSQL (например `postgres://user:pass@localhost:5432/meetings?sslmode=disable`) |
+| `HTTP_ADDR` | нет | Адрес HTTP-сервера (по умолчанию `:8080`) |
+| `WORKER_POOL` | нет | Число воркеров фоновых задач (по умолчанию `3`) |
+| `FX_LOG` | нет | Лог старта Uber Fx в stdout: `debug`, `true`, `1`, `yes` |
+| `LOG_LEVEL` | нет | Если `debug` — то же, что включённый лог Fx |
+| `FX_DEBUG` | нет | `1` — включить лог Fx в stdout |
+| `GIGACHAT_CLIENT_ID` | да | OAuth client id GigaChat |
+| `GIGACHAT_CLIENT_SECRET` | да | OAuth client secret GigaChat |
+| `GIGACHAT_AUTH_URL` | нет | Эндпоинт токена (по умолчанию Sber `.../api/v2/oauth`) |
+| `GIGACHAT_API_URL` | нет | URL chat completions |
+| `GIGACHAT_SCOPE` | нет | OAuth scope (по умолчанию `GIGACHAT_API_PERS`) |
+| `SALUTESPEECH_CLIENT_ID` | да | OAuth client id SaluteSpeech |
+| `SALUTESPEECH_CLIENT_SECRET` | да | OAuth client secret SaluteSpeech |
+| `SALUTESPEECH_REST_URL` | нет | Базовый URL SmartSpeech REST (по умолчанию `https://smartspeech.sber.ru/rest/v1`) |
+| `SALUTESPEECH_AUTH_URL` | нет | URL получения OAuth-токена |
+| `SALUTESPEECH_SCOPE` | нет | OAuth scope (по умолчанию `SALUTE_SPEECH_PERS`) |
 
-Copy `.env.example` and fill in secrets. **Do not commit real credentials.**
+Пример `.env.example`
 
-## Run
+Для запуска скопировать и заполнить `.env`
+
+## Запуск
 
 ```bash
 go run ./cmd/bot
 ```
 
-Build:
+Сборка:
 
 ```bash
 go build -o bot ./cmd/bot
 ```
 
-### Task (optional)
+### Task 
 
-With [Task](https://taskfile.dev/) installed:
+| Команда | Описание |
+|---------|----------|
+| `task build` | Сборка бота в `bin/` (`bot` или `bot.exe`) |
+| `task run` | `go run ./cmd/bot` (подхватывает `.env` в корне репозитория, если есть) |
+| `task vet` | `go vet ./...` |
+| `task docker:up` | Запуск PostgreSQL через `docker/docker-compose.yaml` |
+| `task docker:down` | Остановка контейнеров из compose |
+| `task docker:logs` | Логи PostgreSQL в режиме follow |
 
-| Command | Description |
-|---------|-------------|
-| `task build` | Compile the bot into `bin/` (`bot` or `bot.exe`) |
-| `task run` | `go run ./cmd/bot` (loads `.env` from the repo root if it exists) |
-| `task docker:up` | Start PostgreSQL via `docker/docker-compose.yaml` |
-| `task docker:down` | Stop containers from that compose file |
-| `task docker:logs` | Tail Postgres logs |
-
-Default database URL for the bundled compose stack:
+Строка подключения к БД для базы докер
 
 `postgres://meetings:meetings@localhost:5432/meetings?sslmode=disable`
 
-Health checks (after start):
+Проверки работоспособности после старта:
 
-- `GET /health` — process is up.
-- `GET /ready` — PostgreSQL ping succeeds.
+- `GET /health` — процесс жив.
+- `GET /ready` — успешный ping PostgreSQL.
 
-## Bot commands
+## Команды бота
 
-| Command | Description |
-|---------|-------------|
-| `/start` | Register user |
-| `/list` | List saved meetings |
-| `/get <id>` | Full transcript |
-| `/find <keyword>` | Search transcripts (Russian full-text) |
-| `/chat <text>` | Ask GigaChat |
-| Voice / audio file | Transcribe + summarize + save |
-
-## SaluteSpeech REST notes
-
-The client uses async flow: upload → `speech:asyncRecognize` → `task:get` polling → `data:download`. If Sber changes paths or JSON field names, adjust `internal/adapter/salutespeech/client.go` to match the current [documentation](https://developers.sber.ru/docs/ru/salutespeech/rest/salutespeech-rest-api).
-
-## Migrations
-
-Add versioned files under `internal/migrate/migrations/` (`NNNNNN_name.up.sql` / `.down.sql`). They are applied automatically on each application start.
-
-## License
-
-MIT (or your choice — update this line for your course/project).
+| Команда | Описание |
+|---------|----------|
+| `/start` | Регистрация пользователя |
+| `/list` | Список сохранённых встреч |
+| `/get <id>` | Полный транскрипт |
+| `/find <keyword>` | Поиск по транскриптам (полнотекстовый, русский) |
+| `/chat <текст>` | Вопрос к GigaChat |
+| Голос / аудиофайл | Транскрибация + выжимка + сохранение |
