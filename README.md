@@ -15,8 +15,8 @@ Telegram-бот: транскрибация аудио встреч через *
 
 - Go **1.24+**
 - PostgreSQL 14+ (или совместимая СУБД)
-- Токен Telegram-бота ([BotFather](https://core.telegram.org/bots/tutorial))
-- Учётные данные API SaluteSpeech и GigaChat в [портале разработчика Сбера](https://developers.sber.ru/)
+- Telegram ([BotFather](https://core.telegram.org/bots/tutorial))
+- API SaluteSpeech и GigaChat в [ссылка](https://developers.sber.ru/)
 
 ## Переменные окружения (конфигурация)
 
