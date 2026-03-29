@@ -15,7 +15,7 @@ Telegram-бот: транскрибация аудио встреч через *
 
 - Go **1.24+**
 - PostgreSQL 14+ (или совместимая СУБД)
-- Telegram ([BotFather](https://core.telegram.org/bots/tutorial))
+- Telegram бот @ai_speech_recognition_bot ([BotFather](https://core.telegram.org/bots/tutorial))
 - API SaluteSpeech и GigaChat в [ссылка](https://developers.sber.ru/)
 
 ## Переменные окружения (конфигурация)
