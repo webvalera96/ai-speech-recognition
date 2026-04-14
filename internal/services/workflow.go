@@ -11,6 +11,7 @@ type WorkflowService struct {
 	transcribe Transcriber
 	summarize  Summarizer
 	chat       ChatCompleter
+	users      UserRepository
 	meetings   MeetingRepository
 	notify     Notifier
 }
@@ -20,6 +21,7 @@ func NewWorkflowService(
 	t Transcriber,
 	s Summarizer,
 	c ChatCompleter,
+	u UserRepository,
 	m MeetingRepository,
 	n Notifier,
 ) *WorkflowService {
@@ -27,6 +29,7 @@ func NewWorkflowService(
 		transcribe: t,
 		summarize:  s,
 		chat:       c,
+		users:      u,
 		meetings:   m,
 		notify:     n,
 	}
@@ -36,6 +39,14 @@ func NewWorkflowService(
 func (w *WorkflowService) ProcessTranscribe(ctx context.Context, job Job) error {
 	if len(job.Audio) == 0 {
 		return fmt.Errorf("empty audio")
+	}
+	registered, err := w.users.Exists(ctx, job.TelegramUserID)
+	if err != nil {
+		return fmt.Errorf("check user: %w", err)
+	}
+	if !registered {
+		return w.notify.SendText(ctx, job.ChatID,
+			"You are not registered yet. Please send /start to begin.")
 	}
 	text, err := w.transcribe.Transcribe(ctx, job.Audio, job.FileName)
 	if err != nil {

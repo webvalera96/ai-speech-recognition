@@ -28,6 +28,15 @@ func (r *UserRepository) Upsert(ctx context.Context, telegramUserID int64) error
 	return err
 }
 
+// Exists implements services.UserRepository.
+func (r *UserRepository) Exists(ctx context.Context, telegramUserID int64) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM users WHERE telegram_user_id = $1)
+	`, telegramUserID).Scan(&exists)
+	return exists, err
+}
+
 // MeetingRepository implements services.MeetingRepository.
 type MeetingRepository struct {
 	pool *pgxpool.Pool

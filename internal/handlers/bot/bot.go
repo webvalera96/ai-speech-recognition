@@ -3,6 +3,7 @@ package bothandler
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -123,19 +124,36 @@ func (h *Handlers) HandleAudio(ctx context.Context, telegramUserID, chatID int64
 	return []string{"Processing audio, please wait…"}, nil
 }
 
+// IsAudioDocument returns true when a document's MIME type or file extension
+// matches a supported audio format. Used by the Telegram adapter to gate
+// document messages before routing them to HandleAudio.
+func IsAudioDocument(mimeType, fileName string) bool {
+	mime := strings.ToLower(mimeType)
+	if strings.HasPrefix(mime, "audio/") {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(fileName))
+	switch ext {
+	case ".ogg", ".opus", ".mp3", ".wav", ".flac", ".m4a", ".aac", ".webm", ".weba", ".oga":
+		return true
+	}
+	return false
+}
+
 func splitTelegramMessages(s string) []string {
-	const max = 4000
-	if len(s) <= max {
+	const max = 4000 // runes
+	runes := []rune(s)
+	if len(runes) <= max {
 		return []string{s}
 	}
 	var out []string
-	for len(s) > 0 {
-		if len(s) <= max {
-			out = append(out, s)
+	for len(runes) > 0 {
+		if len(runes) <= max {
+			out = append(out, string(runes))
 			break
 		}
-		out = append(out, s[:max])
-		s = s[max:]
+		out = append(out, string(runes[:max]))
+		runes = runes[max:]
 	}
 	return out
 }

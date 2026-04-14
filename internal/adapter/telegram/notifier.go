@@ -37,17 +37,18 @@ func splitChunks(s string, max int) []string {
 	if s == "" {
 		return []string{""}
 	}
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return []string{s}
 	}
 	var out []string
-	for len(s) > 0 {
-		if len(s) <= max {
-			out = append(out, s)
+	for len(runes) > 0 {
+		if len(runes) <= max {
+			out = append(out, string(runes))
 			break
 		}
-		out = append(out, s[:max])
-		s = s[max:]
+		out = append(out, string(runes[:max]))
+		runes = runes[max:]
 	}
 	return out
 }

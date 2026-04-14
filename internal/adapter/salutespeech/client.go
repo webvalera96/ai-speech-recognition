@@ -276,12 +276,18 @@ func (c *Client) download(ctx context.Context, responseFileID string) ([]byte, e
 func guessEncoding(filename string) (enc string, sampleRate int) {
 	low := strings.ToLower(filename)
 	switch {
-	case strings.HasSuffix(low, ".opus"), strings.HasSuffix(low, ".ogg"):
+	case strings.HasSuffix(low, ".opus"), strings.HasSuffix(low, ".ogg"), strings.HasSuffix(low, ".oga"):
 		return "OPUS", 48000
 	case strings.HasSuffix(low, ".wav"):
 		return "PCM_S16LE", 16000
+	case strings.HasSuffix(low, ".flac"):
+		return "FLAC", 16000
 	case strings.HasSuffix(low, ".mp3"):
 		return "MP3", 44100
+	case strings.HasSuffix(low, ".m4a"), strings.HasSuffix(low, ".aac"):
+		return "MP3", 44100 // re-encoded by Telegram; treat as MP3-like
+	case strings.HasSuffix(low, ".webm"), strings.HasSuffix(low, ".weba"):
+		return "OPUS", 48000
 	default:
 		return "MP3", 44100
 	}

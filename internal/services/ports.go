@@ -9,6 +9,7 @@ import (
 // UserRepository persists Telegram users.
 type UserRepository interface {
 	Upsert(ctx context.Context, telegramUserID int64) error
+	Exists(ctx context.Context, telegramUserID int64) (bool, error)
 }
 
 // MeetingRepository stores meeting transcripts and summaries.
