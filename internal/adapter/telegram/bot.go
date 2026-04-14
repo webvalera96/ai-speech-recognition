@@ -53,6 +53,21 @@ func RegisterHandlers(bot *tele.Bot, h *bothandler.Handlers) {
 		}
 		return handleMedia(h, c, f, name)
 	})
+
+	bot.Handle(tele.OnDocument, func(c tele.Context) error {
+		doc := c.Message().Document
+		if doc == nil {
+			return nil
+		}
+		if !bothandler.IsAudioDocument(doc.MIME, doc.FileName) {
+			return c.Send("Please send a voice message or an audio file (ogg, mp3, wav, flac, m4a, aac, webm).")
+		}
+		name := doc.FileName
+		if name == "" {
+			name = "audio.ogg"
+		}
+		return handleMedia(h, c, doc.File, name)
+	})
 }
 
 // RegisterLifecycle starts and stops telebot polling.
