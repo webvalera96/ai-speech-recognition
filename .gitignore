@@ -2,6 +2,5 @@
 *.exe
 .env
 .idea/
-.vscode/
 *.log
 vendor/
